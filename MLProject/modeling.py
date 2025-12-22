@@ -37,8 +37,8 @@ def run_model():
     print("Dataset berhasil diload")
 
     # Fitur dan target
-    X = df.drop("Status Gizi", axis=1)
-    y = df["Status Gizi"]
+    X = df.drop("Stunting", axis=1)
+    y = df["Stunting"]
 
     # Split data
     X_train, X_test, y_train, y_test = train_test_split(
@@ -96,4 +96,5 @@ def run_model():
 if __name__ == "__main__":
     os.makedirs(MLRUNS_PATH, exist_ok=True)
     run_model()
+
 
