@@ -11,7 +11,6 @@ def run_model(data_path):
 
     print("Training dimulai...")
 
-    # 🔥 PAKAI parameter dari MLProject
     data = pd.read_csv(data_path)
 
     X = data.drop(columns=["status_gizi"])
@@ -46,3 +45,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run_model(args.data_path)
+
