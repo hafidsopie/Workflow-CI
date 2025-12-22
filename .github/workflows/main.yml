@@ -40,7 +40,7 @@ jobs:
 
       - name: Build Docker image from MLflow model
         run: |
-          mlflow models build-docker -m $MODEL_PATH -n hafidhshovi/stunting-xgboost
+          mlflow models build-docker -m $MODEL_PATH -n hafidsopi/stunting-xgboost
 
       - name: Push Docker image to Docker Hub
         run: |
