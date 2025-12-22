@@ -1,54 +1,35 @@
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import accuracy_score, f1_score
-from xgboost import XGBClassifier
 import mlflow
-import mlflow.sklearn
-import os
-
-DATA_PATH = "stunting_wasting_preprocessing.csv"
+import mlflow.xgboost
+import pandas as pd
+from xgboost import XGBClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
 def run_model():
-    print("Training dimulai...")
-    print("Working directory:", os.getcwd())
+    mlflow.set_experiment("Stunting Classification - XGBoost")
 
-    # AUTLOG SAJA (JANGAN SET EXPERIMENT, JANGAN START RUN)
-    mlflow.sklearn.autolog()
+    with mlflow.start_run() as run:
+        print("Training dimulai...")
 
-    df = pd.read_csv(DATA_PATH)
-    print("Data berhasil diload")
+        data = pd.read_csv("stunting_wasting_preprocessed.csv")
+        X = data.drop("status_gizi", axis=1)
+        y = data["status_gizi"]
 
-    X = df.drop(columns=["Stunting"])
-    y = df["Stunting"]
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42
+        )
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+        model = XGBClassifier(eval_metric="logloss")
+        model.fit(X_train, y_train)
 
-    scaler = MinMaxScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+        preds = model.predict(X_test)
+        acc = accuracy_score(y_test, preds)
 
-    model = XGBClassifier(
-        n_estimators=100,
-        max_depth=5,
-        learning_rate=0.1,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        random_state=42,
-        eval_metric="mlogloss"
-    )
+        mlflow.log_metric("accuracy", acc)
+        mlflow.xgboost.log_model(model, artifact_path="model")
 
-    model.fit(X_train, y_train)
-
-    y_pred = model.predict(X_test)
-
-    acc = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred, average="weighted")
-
-    print(f"Akurasi: {acc}")
-    print(f"F1-score: {f1}")
+        # 🔥 SIMPAN run_id
+        print(f"RUN_ID={run.info.run_id}")
 
 if __name__ == "__main__":
     run_model()
