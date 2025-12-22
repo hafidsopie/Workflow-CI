@@ -1,7 +1,6 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
 import mlflow
 import mlflow.sklearn
@@ -11,17 +10,15 @@ DATA_PATH = "stunting_wasting_preprocessing.csv"
 EXPERIMENT_NAME = "Stunting Classification - XGBoost"
 
 def run_model():
-    # Tracking MLflow (LOCAL FILESTORE)
     mlflow.set_tracking_uri("file:./mlruns")
     mlflow.set_experiment(EXPERIMENT_NAME)
 
-    # ✅ AUTOLOG AKTIF (JANGAN start_run MANUAL)
+    # ✅ AUTOLOG FULL (TANPA MANUAL LOG)
     mlflow.sklearn.autolog()
 
     print("Training dimulai...")
     print("Working directory:", os.getcwd())
 
-    # Load data
     df = pd.read_csv(DATA_PATH)
     print("Data berhasil diload")
 
@@ -51,16 +48,6 @@ def run_model():
 
     model.fit(X_train, y_train)
 
-    y_pred = model.predict(X_test)
-    acc = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred, average="weighted")
-
-    # Manual metric tambahan (boleh)
-    mlflow.log_metric("accuracy_manual", acc)
-    mlflow.log_metric("f1_weighted", f1)
-
-    print(f"Akurasi: {acc:.4f}")
-    print(f"F1-score: {f1:.4f}")
     print("Training selesai")
 
 if __name__ == "__main__":
