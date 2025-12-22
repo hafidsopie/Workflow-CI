@@ -1,7 +1,7 @@
-import argparse
 import mlflow
 import mlflow.xgboost
 import pandas as pd
+import argparse
 from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -11,7 +11,9 @@ def run_model(data_path):
 
     print("Training dimulai...")
 
+    # 🔥 PAKAI parameter dari MLProject
     data = pd.read_csv(data_path)
+
     X = data.drop(columns=["status_gizi"])
     y = data["status_gizi"]
 
