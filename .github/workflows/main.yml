@@ -1,7 +1,8 @@
-name: MLflow CI Docker
+name: MLflow CI - Prediksi Stunting
 
 on:
   push:
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -9,42 +10,61 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
 
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install mlflow xgboost scikit-learn pandas
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install mlflow pandas scikit-learn xgboost
 
-      - name: Run MLflow Project
-        run: |
-          mlflow run . \
-            --env-manager=local \
-            -P data_path=stunting_wasting_preprocessed.csv
+    - name: Create mlruns folder
+      run: mkdir -p MLProject/mlruns
 
-      - name: Find latest MLflow model
-        run: |
-          MODEL_PATH=$(find mlruns -type d -name model | head -n 1)
-          echo "MODEL_PATH=$MODEL_PATH" >> $GITHUB_ENV
-          echo "Model path: $MODEL_PATH"
+    - name: Run Training Script
+      working-directory: MLProject
+      run: python modelling.py
 
-      - name: Login Docker Hub
-        run: |
-          echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login \
-            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+    - name: Login Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
-      - name: Build Docker image
-        run: |
-          mlflow models build-docker \
-            -m $MODEL_PATH \
-            -n hafidsopie/stunting-xgboost
+    - name: Build Docker Image with MLflow
+      working-directory: MLProject
+      env:
+        MLFLOW_TRACKING_URI: file:./mlruns
+      run: |
+        echo "Isi mlruns:"
+        find mlruns -maxdepth 4
 
-      - name: Push Docker image
-        run: |
-          docker push hafidsopie/stunting-xgboost
+        MODEL_PATH=$(find mlruns -type d -path "*/artifacts/model" | head -n 1)
+
+        echo "Model path ditemukan:"
+        echo "$MODEL_PATH"
+
+        mlflow models build-docker \
+          --model-uri "$MODEL_PATH" \
+          --name stunting-xgboost
+
+    - name: Tag & Push Docker Image
+      env:
+        DOCKER_USER: ${{ secrets.DOCKER_HUB_USERNAME }}
+      run: |
+        DOCKER_USER_CLEAN=$(printf "%s" "$DOCKER_USER")
+        IMAGE_NAME="${DOCKER_USER_CLEAN}/stunting-xgboost:latest"
+
+        echo "Tagging image as $IMAGE_NAME"
+        docker tag stunting-xgboost "$IMAGE_NAME"
+        docker push "$IMAGE_NAME"
+
+    - name: Upload MLflow Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: mlruns
+        path: MLProject/mlruns
