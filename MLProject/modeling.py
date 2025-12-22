@@ -60,7 +60,7 @@ def run_model():
         max_depth=6,
         subsample=0.8,
         colsample_bytree=0.8,
-        objective="multi:softmax",  # gunakan "binary:logistic" jika klasifikasi biner
+        objective="multi:softmax",  
         eval_metric="mlogloss",
         random_state=42
     )
@@ -96,3 +96,4 @@ def run_model():
 if __name__ == "__main__":
     os.makedirs(MLRUNS_PATH, exist_ok=True)
     run_model()
+
