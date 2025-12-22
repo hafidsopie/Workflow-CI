@@ -1,92 +1,73 @@
+import os
 import pandas as pd
+import mlflow
+import mlflow.xgboost
+
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
-import mlflow
-import mlflow.sklearn
-import os
 
-dataPath = 'stunting_wasting_preprocessing.csv'
-experimentName = 'Stunting Classification - XGBoost'
+
+DATA_PATH = "stunting_wasting_preprocessing.csv"
+EXPERIMENT_NAME = "Stunting Classification - XGBoost"
+TARGET_COL = "Stunting"
+RANDOM_STATE = 42
+
 
 def run_model():
-    # Tracking MLflow
-    mlflow.set_tracking_uri("file:./mlruns")
-    mlflow.set_experiment(experimentName)
+    print("Training dimulai...")
+    print("Working directory:", os.getcwd())
 
-    # 🔹 AKTIFKAN AUTOLOG
-    mlflow.sklearn.autolog()
 
-    print('Training dimulai...')
-    print('Working directory:', os.getcwd())
+    df = pd.read_csv(DATA_PATH)
+    print("Data berhasil diload")
+    print("Kolom dataset:", df.columns.tolist())
+    print("Distribusi kelas:\n", df[TARGET_COL].value_counts())
 
-    # Load data
-    try:
-        df = pd.read_csv(dataPath)
-        print('Data berhasil diload')
-    except FileNotFoundError:
-        print(f"Error: Dataset tidak ditemukan di {dataPath}")
-        return
+    X = df.drop(columns=[TARGET_COL])
+    y = df[TARGET_COL]
 
-    print('Kolom dataset:', df.columns.tolist())
-
-    # Pisahkan fitur dan target
-    X = df.drop(columns=['Stunting'])
-    y = df['Stunting']
-
-    print('Distribusi kelas:\n', y.value_counts())
-
-    # Split data (stratified)
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+        X, y,
+        test_size=0.2,
+        random_state=RANDOM_STATE,
+        stratify=y
     )
-    print('Data berhasil di split')
+    print("Data berhasil di split")
 
-    # Scaling
     scaler = MinMaxScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
-    print('Data berhasil di scale')
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+    print("Data berhasil di scale")
 
-    # Training model
-    with mlflow.start_run() as run:
-        print('Memulai pelatihan model...')
+    model = XGBClassifier(
+        n_estimators=100,
+        max_depth=5,
+        learning_rate=0.1,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        random_state=RANDOM_STATE,
+        eval_metric="logloss"
+    )
 
-        # Manual log parameter (pelengkap autolog)
-        mlflow.log_param("model", "XGBoost")
-        mlflow.log_param("test_size", 0.2)
-        mlflow.log_param("data_path", dataPath)
+    model.fit(X_train, y_train)
 
-        # Model
-        model = XGBClassifier(
-            n_estimators=100,
-            max_depth=5,
-            learning_rate=0.1,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            random_state=42,
-            eval_metric="mlogloss"
-        )
+    y_pred = model.predict(X_test)
 
-        model.fit(X_train_scaled, y_train)
+    acc = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred, average="weighted")
 
-        # Evaluasi manual
-        y_pred = model.predict(X_test_scaled)
+    mlflow.log_metric("accuracy", acc)
+    mlflow.log_metric("f1_score_weighted", f1)
 
-        acc = accuracy_score(y_test, y_pred)
-        f1 = f1_score(y_test, y_pred, average='weighted')
+    print(f"Akurasi  : {acc:.4f}")
+    print(f"F1-score : {f1:.4f}")
 
-        # Manual log metric (tambahan dari autolog)
-        mlflow.log_metric("accuracy_manual", acc)
-        mlflow.log_metric("f1_score_weighted", f1)
-
-        # Manual log model (karena autolog log_models=False)
-        mlflow.sklearn.log_model(model, "model")
-
-        print(f"Akurasi test set: {acc:.4f}")
-        print(f"F1-score (weighted): {f1:.4f}")
-        print(f"Pelatihan selesai. Run ID: {run.info.run_id}")
 
 if __name__ == "__main__":
+
+    mlflow.set_experiment(EXPERIMENT_NAME)
+    mlflow.xgboost.autolog()
+
     run_model()
