@@ -1,45 +1,43 @@
-import os
 import pandas as pd
-import mlflow
-import mlflow.xgboost
-
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import accuracy_score, f1_score
 from xgboost import XGBClassifier
-
+import mlflow
+import mlflow.sklearn
+import os
 
 DATA_PATH = "stunting_wasting_preprocessing.csv"
 EXPERIMENT_NAME = "Stunting Classification - XGBoost"
-TARGET_COL = "Stunting"
-RANDOM_STATE = 42
-
 
 def run_model():
+    # Tracking MLflow (LOCAL FILESTORE)
+    mlflow.set_tracking_uri("file:./mlruns")
+    mlflow.set_experiment(EXPERIMENT_NAME)
+
+    # ✅ AUTOLOG AKTIF (JANGAN start_run MANUAL)
+    mlflow.sklearn.autolog()
+
     print("Training dimulai...")
     print("Working directory:", os.getcwd())
 
-
+    # Load data
     df = pd.read_csv(DATA_PATH)
     print("Data berhasil diload")
-    print("Kolom dataset:", df.columns.tolist())
-    print("Distribusi kelas:\n", df[TARGET_COL].value_counts())
 
-    X = df.drop(columns=[TARGET_COL])
-    y = df[TARGET_COL]
+    X = df.drop(columns=["Stunting"])
+    y = df["Stunting"]
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y,
         test_size=0.2,
-        random_state=RANDOM_STATE,
+        random_state=42,
         stratify=y
     )
-    print("Data berhasil di split")
 
     scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
-    print("Data berhasil di scale")
 
     model = XGBClassifier(
         n_estimators=100,
@@ -47,27 +45,23 @@ def run_model():
         learning_rate=0.1,
         subsample=0.8,
         colsample_bytree=0.8,
-        random_state=RANDOM_STATE,
-        eval_metric="logloss"
+        random_state=42,
+        eval_metric="mlogloss"
     )
 
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)
-
     acc = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred, average="weighted")
 
-    mlflow.log_metric("accuracy", acc)
-    mlflow.log_metric("f1_score_weighted", f1)
+    # Manual metric tambahan (boleh)
+    mlflow.log_metric("accuracy_manual", acc)
+    mlflow.log_metric("f1_weighted", f1)
 
-    print(f"Akurasi  : {acc:.4f}")
-    print(f"F1-score : {f1:.4f}")
-
+    print(f"Akurasi: {acc:.4f}")
+    print(f"F1-score: {f1:.4f}")
+    print("Training selesai")
 
 if __name__ == "__main__":
-
-    mlflow.set_experiment(EXPERIMENT_NAME)
-    mlflow.xgboost.autolog()
-
     run_model()
