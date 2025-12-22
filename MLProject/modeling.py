@@ -8,13 +8,12 @@ import mlflow.sklearn
 import os
 
 DATA_PATH = "stunting_wasting_preprocessing.csv"
-EXPERIMENT_NAME = "Stunting Classification - XGBoost"
 
 def run_model():
     print("Training dimulai...")
     print("Working directory:", os.getcwd())
 
-    mlflow.set_experiment(EXPERIMENT_NAME)
+    # AUTLOG SAJA (JANGAN SET EXPERIMENT, JANGAN START RUN)
     mlflow.sklearn.autolog()
 
     df = pd.read_csv(DATA_PATH)
@@ -47,9 +46,6 @@ def run_model():
 
     acc = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred, average="weighted")
-
-    mlflow.log_metric("accuracy_manual", acc)
-    mlflow.log_metric("f1_weighted", f1)
 
     print(f"Akurasi: {acc}")
     print(f"F1-score: {f1}")
