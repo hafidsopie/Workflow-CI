@@ -8,28 +8,35 @@ from sklearn.metrics import accuracy_score
 def run_model():
     mlflow.set_experiment("Stunting Classification - XGBoost")
 
-    with mlflow.start_run() as run:
-        print("Training dimulai...")
+    print("Training dimulai...")
 
-        data = pd.read_csv("stunting_wasting_preprocessed.csv")
-        X = data.drop("status_gizi", axis=1)
-        y = data["status_gizi"]
+    data = pd.read_csv("stunting_wasting_preprocessed.csv")
+    X = data.drop(columns=["status_gizi"])
+    y = data["status_gizi"]
 
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
 
-        model = XGBClassifier(eval_metric="logloss")
-        model.fit(X_train, y_train)
+    model = XGBClassifier(
+        n_estimators=100,
+        max_depth=5,
+        learning_rate=0.1,
+        eval_metric="logloss",
+        random_state=42
+    )
 
-        preds = model.predict(X_test)
-        acc = accuracy_score(y_test, preds)
+    model.fit(X_train, y_train)
 
-        mlflow.log_metric("accuracy", acc)
-        mlflow.xgboost.log_model(model, artifact_path="model")
+    preds = model.predict(X_test)
+    acc = accuracy_score(y_test, preds)
 
-        # 🔥 SIMPAN run_id
-        print(f"RUN_ID={run.info.run_id}")
+    # 🔥 LANGSUNG LOG (run SUDAH ADA)
+    mlflow.log_metric("accuracy", acc)
+    mlflow.xgboost.log_model(model, artifact_path="model")
+
+    print("Training selesai")
+    print("Accuracy:", acc)
 
 if __name__ == "__main__":
     run_model()
