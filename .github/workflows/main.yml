@@ -1,36 +1,50 @@
 name: MLflow CI Docker
 
-on: [push, workflow_dispatch]
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
   train:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install mlflow xgboost scikit-learn pandas
-          
-     - name: Run MLflow Project
+
+      - name: Run MLflow Project
         run: |
           mlflow run . \
             --env-manager=local \
             -P data_path=stunting_wasting_preprocessed.csv
 
-
-
-      - name: Get latest run_id
+      - name: Find latest MLflow model
         run: |
-          RUN_ID=$(mlflow runs list --experiment-name "Stunting Classification - XGBoost" --max-results 1 | tail -n 1 | awk '{print $1}')
-          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
-          echo "✅ RUN_ID=$RUN_ID"
+          MODEL_PATH=$(find mlruns -type d -name model | head -n 1)
+          echo "MODEL_PATH=$MODEL_PATH" >> $GITHUB_ENV
+          echo "Model path: $MODEL_PATH"
+
+      - name: Login Docker Hub
+        run: |
+          echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login \
+            -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
 
       - name: Build Docker image
         run: |
-          mlflow models build-docker -m runs:/$RUN_ID/model -n hafidsopi/stunting-xgboost
+          mlflow models build-docker \
+            -m $MODEL_PATH \
+            -n hafidsopie/stunting-xgboost
+
+      - name: Push Docker image
+        run: |
+          docker push hafidsopie/stunting-xgboost
