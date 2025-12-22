@@ -17,11 +17,13 @@ jobs:
         run: |
           pip install mlflow xgboost scikit-learn pandas
           
-      - name: Run MLflow Project
+     - name: Run MLflow Project
         run: |
           mlflow run . \
             --env-manager=local \
             -P data_path=stunting_wasting_preprocessed.csv
+
+
 
       - name: Get latest run_id
         run: |
