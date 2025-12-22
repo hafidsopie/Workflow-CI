@@ -1,48 +1,98 @@
-import mlflow
-import mlflow.xgboost
+import os
 import pandas as pd
-import argparse
-from xgboost import XGBClassifier
+
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
 
-def run_model(data_path):
-    mlflow.set_experiment("Stunting Classification - XGBoost")
+from xgboost import XGBClassifier
 
-    print("Training dimulai...")
+import mlflow
+import mlflow.sklearn
 
-    data = pd.read_csv(data_path)
+# ===============================
+# Konfigurasi MLflow
+# ===============================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MLRUNS_PATH = os.path.join(BASE_DIR, "mlruns")
 
-    X = data.drop(columns=["status_gizi"])
-    y = data["status_gizi"]
+mlflow.set_tracking_uri(f"file:{MLRUNS_PATH}")
+mlflow.set_experiment("Prediksi_Balita_Stunting_Wasting_XGBoost")
 
+mlflow.sklearn.autolog()
+
+# ===============================
+# Path Dataset
+# ===============================
+DATA_PATH = os.path.join(BASE_DIR, "stunting_wasting_preprocessing.csv")
+
+# ===============================
+# Training Function
+# ===============================
+def run_model():
+    print("Memulai training model...")
+    print("Mencari dataset di:", DATA_PATH)
+
+    df = pd.read_csv(DATA_PATH)
+    print("Dataset berhasil diload")
+
+    # Fitur dan target
+    X = df.drop("Status Gizi", axis=1)
+    y = df["Status Gizi"]
+
+    # Split data
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
+        X, y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y
     )
 
+    # Scaling
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    # Model XGBoost
     model = XGBClassifier(
-        n_estimators=100,
-        max_depth=5,
+        n_estimators=300,
         learning_rate=0.1,
-        eval_metric="logloss",
+        max_depth=6,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        objective="multi:softmax",  # gunakan "binary:logistic" jika klasifikasi biner
+        eval_metric="mlogloss",
         random_state=42
     )
 
-    model.fit(X_train, y_train)
+    # Training
+    print("Training model XGBoost...")
+    model.fit(X_train_scaled, y_train)
 
-    preds = model.predict(X_test)
-    acc = accuracy_score(y_test, preds)
+    # Evaluasi
+    y_pred = model.predict(X_test_scaled)
+    accuracy = accuracy_score(y_test, y_pred)
+    print("Accuracy:", accuracy)
 
-    mlflow.log_metric("accuracy", acc)
-    mlflow.xgboost.log_model(model, artifact_path="model")
+    mlflow.log_metric("accuracy", accuracy)
 
-    print("Training selesai")
-    print("Accuracy:", acc)
+    # Simpan model & scaler ke MLflow
+    mlflow.sklearn.log_model(
+        sk_model=model,
+        artifact_path="model",
+        input_example=X_train.iloc[:5]
+    )
 
+    mlflow.sklearn.log_model(
+        sk_model=scaler,
+        artifact_path="scaler"
+    )
+
+    print("Training selesai dan model berhasil disimpan di MLflow.")
+
+# ===============================
+# Main
+# ===============================
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--data_path", type=str, required=True)
-    args = parser.parse_args()
-
-    run_model(args.data_path)
-
+    os.makedirs(MLRUNS_PATH, exist_ok=True)
+    run_model()
