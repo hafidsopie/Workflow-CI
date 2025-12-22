@@ -1,53 +1,32 @@
-name: MLflow CI + Docker - Stunting XGBoost
+name: MLflow CI Docker
 
-on:
-  push:
-    paths:
-      - 'MLProject/**'
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
-  train-and-dockerize:
+  train:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install mlflow xgboost scikit-learn pandas numpy
+          pip install mlflow xgboost scikit-learn pandas
 
-      - name: Run MLflow Project (CI Retraining)
+      - name: Run training
         run: |
           mlflow run MLProject --env-manager=local
 
-      - name: Find latest MLflow model
+      - name: Get latest run_id
         run: |
-          MODEL_PATH=$(find MLProject/mlruns -type d -name model | sort -r | head -n 1)
+          RUN_ID=$(mlflow runs list --experiment-name "Stunting Classification - XGBoost" --max-results 1 | tail -n 1 | awk '{print $1}')
+          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+          echo "✅ RUN_ID=$RUN_ID"
 
-          if [ -z "$MODEL_PATH" ]; then
-            echo "❌ Model tidak ditemukan"
-            exit 1
-          fi
-
-          echo "MODEL_PATH=$MODEL_PATH" >> $GITHUB_ENV
-          echo "✅ Model path: $MODEL_PATH"
-
-      - name: Login to Docker Hub
+      - name: Build Docker image
         run: |
-          echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
-
-      - name: Build Docker image from MLflow model
-        run: |
-          mlflow models build-docker -m $MODEL_PATH -n hafidsopi/stunting-xgboost
-
-      - name: Push Docker image to Docker Hub
-        run: |
-          docker push hafidsopi/stunting-xgboost
+          mlflow models build-docker -m runs:/$RUN_ID/model -n hafidsopi/stunting-xgboost
