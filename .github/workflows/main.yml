@@ -27,7 +27,7 @@ jobs:
 
     - name: Run Training Script
       working-directory: MLProject
-      run: python modelling.py
+      run: python modeling.py
 
     - name: Login Docker Hub
       uses: docker/login-action@v3
