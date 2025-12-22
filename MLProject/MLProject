@@ -1,7 +1,9 @@
-name: stunting-xgboost-ci
-
-conda_env: conda.yaml
+name: stunting-ci
 
 entry_points:
   main:
-    command: "python modeling.py"
+    parameters:
+      data_path:
+        type: path
+        default: stunting_wasting_preprocessed.csv
+    command: "python modeling.py --data_path {data_path}"
