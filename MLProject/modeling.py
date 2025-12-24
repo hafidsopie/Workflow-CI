@@ -30,7 +30,6 @@ DATA_PATH = os.path.join(BASE_DIR, "stunting_wasting_preprocessing.csv")
 # Training Function
 # ===============================
 def run_model(DATA_PATH):
-    with mlflow.start_run():
         print("Memulai training model...")
         print("Mencari dataset di:", DATA_PATH)
 
@@ -101,6 +100,7 @@ if __name__ == "__main__":
 
     os.makedirs(MLRUNS_PATH, exist_ok=True)
     run_model(DATA_PATH)
+
 
 
 
