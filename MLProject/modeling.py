@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
 
 from xgboost import XGBClassifier
-
+import argparse
 import mlflow
 import mlflow.sklearn
 
@@ -29,10 +29,9 @@ DATA_PATH = os.path.join(BASE_DIR, "stunting_wasting_preprocessing.csv")
 # ===============================
 # Training Function
 # ===============================
-def run_model():
+def run_model(DATA_PATH):
     print("Memulai training model...")
     print("Mencari dataset di:", DATA_PATH)
-
     df = pd.read_csv(DATA_PATH)
     print("Dataset berhasil diload")
 
@@ -94,7 +93,18 @@ def run_model():
 # Main
 # ===============================
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        required=True,
+        help="Path dataset CSV"
+    )
+    args = parser.parse_args()
+
+    DATA_PATH = os.path.join(BASE_DIR, args.data_path)
+
     os.makedirs(MLRUNS_PATH, exist_ok=True)
-    run_model()
+    run_model(DATA_PATH)
 
 
