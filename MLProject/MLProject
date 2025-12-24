@@ -3,6 +3,8 @@ name: stunting-xgboost-ci
 entry_points:
   main:
     parameters:
-      data_path: path
+      data_path:
+        type: path
+        default: "stunting_wasting_preprocessing.csv"
     command: >
       python modelling.py --data_path {data_path}
