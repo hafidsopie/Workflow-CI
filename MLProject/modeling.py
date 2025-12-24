@@ -12,9 +12,8 @@ import mlflow
 import mlflow.sklearn
 
 # ===============================
-# Konfigurasi MLflow
+# Autolog (BOLEH)
 # ===============================
-mlflow.set_experiment("Prediksi_Balita_Stunting_Wasting_XGBoost")
 mlflow.sklearn.autolog()
 
 # ===============================
@@ -62,7 +61,7 @@ def run_model(data_path):
 
     mlflow.log_metric("accuracy", accuracy)
 
-    print("Training selesai dan model tersimpan di MLflow")
+    print("Training selesai")
 
 # ===============================
 # Main
