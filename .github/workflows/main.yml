@@ -25,9 +25,9 @@ jobs:
     - name: Create mlruns folder
       run: mkdir -p MLProject/mlruns
 
-    - name: Run Training Script
+    - name: Run Training with MLflow Project
       working-directory: MLProject
-      run: python modeling.py
+      run: mlflow run .
 
     - name: Login Docker Hub
       uses: docker/login-action@v3
